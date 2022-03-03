@@ -1,58 +1,49 @@
 <template>
-    <div >
-    <div class="row pb-3 mb-5 border-bottom">
-        <div class="col-12">
+   <div >
+      <div class="row pb-3 mb-5 border-bottom">
+         <div class="col-12">
             <h3>Filters</h3>
-        </div>
-    </div>
-    <div class="">
-        <div class="accordion" id="accordionExample">
-            
+         </div>
+      </div>
+      <div class="">
+         <div class="accordion" id="accordionExample">
             <div class="accordion-item" v-for="(filter, index) in filters" :key="index">
-                <h2 class="accordion-header" :id="index">
-                <button class="accordion-button filter-title" type="button" data-bs-toggle="collapse" :data-bs-target="'#collapse'+index" aria-expanded="true" :aria-controls="'collapse'+index">
-                    {{index | formatFilterLabel}}
-                </button>
-                </h2>
-                <div :id="'collapse'+ index" class="accordion-collapse collapse show" :aria-labelledby="index" data-bs-parent="#accordionExample">
-                <div class="accordion-body">
-                <ul>
+                
+               <h2 class="accordion-header" :id="index" v-if="Object.keys(filter).length">
+                  <button class="accordion-button filter-title" type="button" data-bs-toggle="collapse" :data-bs-target="'#collapse'+index" aria-expanded="true" :aria-controls="'collapse'+index">
+                  {{index | formatFilterLabel}}
+                  </button>
+               </h2>
+               <div :id="'collapse'+ index"  class="accordion-collapse collapse show" v-if="Object.keys(filter).length" :aria-labelledby="index" data-bs-parent="#accordionExample">
+                  <div class="accordion-body">
+                     <ul>
                         <li v-for="(optionCount, optionIndex) in filter" :key="optionIndex">
-                            <div class="form-check" v-if="index == 'price'">
-                                <input class="form-check-input" type="checkbox" @click="applyFilter" :name="index" :value="optionCount[0]" :id="optionIndex">
-                                <label class="form-check-label" :for="optionIndex">
-
-                                    
-                                    
-                                    {{optionCount[0]   | formatPrice}} ({{optionCount.product_count}})
-                                </label>
-                            </div>
-
-                               <div class="form-check" v-else-if="index == 'discount'">
-                                <input class="form-check-input" type="checkbox" @click="applyFilter" :name="index" :value="optionCount[0]" :id="optionIndex" >
-                                <label class="form-check-label" :for="optionIndex">
-                                       
-                                       {{optionCount[0]  | formatDiscount}} ({{optionCount[1]}})
-                                </label>
-                            </div>
-
-                            <div class="form-check" v-else>
-                                <input class="form-check-input" type="checkbox" @click="applyFilter" :name="index" :value="optionIndex" :id="optionIndex">
-                                <label class="form-check-label" :for="optionIndex">
-
-                                    {{optionIndex}} ({{optionCount}})
-                                </label>
-                            </div>
+                           <div class="form-check" v-if="index == 'price'">
+                              <input class="form-check-input" type="checkbox" @click="applyFilter" :name="index" :value="optionCount[0]" :id="optionIndex"  :checked="filterKey.includes(optionCount[0].split(',')[0])">
+                              <label class="form-check-label" :for="optionIndex" >
+                              {{optionCount[0]   | formatPrice}} ({{optionCount.product_count}}) 
+                              </label>
+                           </div>
+                           <div class="form-check" v-else-if="index == 'discount'">
+                              <input class="form-check-input" type="checkbox" @click="applyFilter" :name="index" :value="optionCount[0]" :id="optionIndex"  :checked="filterKey.includes(optionCount[0])">
+                              <label class="form-check-label" :for="optionIndex">
+                              {{optionCount[0]  | formatDiscount}} ({{optionCount[1]}}) 
+                              </label>
+                           </div>
+                           <div class="form-check" v-else>
+                              <input class="form-check-input" type="checkbox" @click="applyFilter" :name="index" :value="optionIndex" :id="optionIndex" :checked="filterKey.includes(optionIndex)">
+                              <label class="form-check-label" :for="optionIndex">
+                              {{optionIndex}} ({{optionCount}})
+                              </label>
+                           </div>
                         </li>
-                    </ul>
-                </div>
-                </div>
+                     </ul>
+                  </div>
+               </div>
             </div>
-        </div>
-    </div>
-
-          
-    </div>
+         </div>
+      </div>
+   </div>
 </template>
 
 <script>
@@ -61,7 +52,7 @@
         data () {
             return  {
                 appliedFilters: [],
-                filtetKey: []
+                filterKey: []
             }
         },
 
@@ -72,6 +63,12 @@
             const params = new URLSearchParams(window.location.search)
 
             params.forEach((param,index) => {
+
+                param.split(',').forEach((pr) => {
+
+                    this.filterKey.push(pr)    
+                })
+                
                 
             this.appliedFilters.push(index+'='+param)
                 
@@ -185,7 +182,7 @@
     ul {
         list-style: none;
     }
-    .form-check {
+    .form-check-label {
         cursor: pointer;
     }
     .sidebar {

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 
 class PimFlatCatalog extends Model
 {
@@ -73,59 +74,97 @@ class PimFlatCatalog extends Model
         $query->selectRaw('group_concat(size) as sizes');
 
         $query->groupBy('group_id');
-        
+
+
+        $products = $query->paginate(30);
         
         return [
-            'products' =>  $query->paginate(30),
-            'filters' => $this->getProductFilter($query),
+            'products' => $products,
+            'filters' => $this->getProductFilter($params),
         ];
 
     } 
 
 
 
-    public function getProductFilter($query)
+    public function getProductFilter($params)
     {
 
-     $filterData = $this->select('sub_category', 'gender', 'size', 'price', 'discount',
-        'color_family',
-        'fit',
-        'bottom_type',
-        'hood',
-        'pattern',
-        'print_or_pattern_type',
-        'sleeve_length',
-        'top_length',
-        'closure')->groupBy('group_id')->get();
+        
+        $query = DB::table('pim_flat_catalog');
+
+        $params = Arr::except(request()->all(), ['page']);
+
+        foreach ($params as $key=> $param) {
+
+            if ($key == 'price') {
+
+                $query->whereBetween('selling_price', explode(",",$param));
+
+            } 
+            elseif($key == 'search-term') { 
+              $columns  =    collect($this->first())->keys();
+                foreach ($columns as  $column) {
+                    foreach (explode(" ", $param) as  $key=> $ppram) {
+                        if($key == 0 ) {
+                            $query->orWhere($column,'like', '%'.$ppram.'%');
+                        } else {
+                            $query->where($column,'like', '%'.$ppram.'%');
+                            
+                        }
+                    }
+                }
+
+            }
+            elseif($key == 'discount') {
+                $query->where($key, '>', $param);
+            }
+
+            elseif($key == 'sortBy') {
+
+                switch($param) {
+                    case  'low_price' : {
+                        $query->orderBy('price', 'asc') ;
+                    }
+                    case  'relavance' : {
+
+                    }
+                    case  'heigh_price' : {
+                        $query->orderBy('price', 'desc') ;
+                    }
+                    case  'discount' : {
+                        $query->orderBy('discount', 'desc') ;
+                    }
+                }
+                
+            } 
+            else {
+
+                $query->whereIn($key, explode(",",$param));
+            }
+        }
+  
+
+        $query->groupBy('group_id');
+
+        $products = $query->get();
 
 
        $filters = [
-            'sub_category' =>  $this->getFilterLabel('sub_category', $filterData),
-            'price' =>  [
-                'Rs0 to Rs1000'    => ['0,1000' , 'product_count' => $this->select('selling_price')->whereBetween('selling_price',[0, 1000] )->groupBy('group_id')->get()->count()] ,
-                'Rs1001 to Rs1500' => ['1001,1500' , 'product_count' =>$this->select('selling_price')->whereBetween('selling_price',[1001, 1500] )->groupBy('group_id')->get()->count()],
-                'Rs1501 to Rs2000' => ['1501,2000'  , 'product_count' => $this->select('selling_price')->whereBetween('selling_price',[1501, 2000] )->groupBy('group_id')->get()->count()],
-                'Rs2001 to Rs3000' => [ '2001,3000' , 'product_count' =>$this->select('selling_price')->whereBetween('selling_price',[2001, 3000] )->groupBy('group_id')->get()->count()],
-                'Rs3001 to Above'  => [ '3001,1000000', 'product_count' =>$this->select('selling_price')->whereBetween('selling_price',[3001, 1000000] )->groupBy('group_id')->get()->count()]
-            ] ,
-           'gender' => $this->getFilterLabel('gender', $filterData),
-           'size' => $this->getFilterLabel('size', $filterData),
-           'color_family' => $this->getFilterLabel('color_family', $filterData),
-           'fit' =>  $this->getFilterLabel('fit', $filterData),
-           'bottom_type' =>  $this->getFilterLabel('bottom_type', $filterData),
-           'hood' =>  $this->getFilterLabel('hood', $filterData),
-           'pattern' =>  $this->getFilterLabel('pattern', $filterData),
-           'print_or_pattern_type' =>  $this->getFilterLabel('print_or_pattern_type', $filterData),
-           'sleeve_length' =>  $this->getFilterLabel('sleeve_length', $filterData),
-           'top_length' =>  $this->getFilterLabel('top_length', $filterData),
-           'closure' =>  $this->getFilterLabel('closure', $filterData),
-           'discount' =>   [
-               '16% and Above' => ['16',  $this->select('discount')->where('discount', '>', 16)->groupBy('group_id')->get()->count()],
-               '20% and Above' => ['20',  $this->select('discount')->where('discount', '>', 20)->groupBy('group_id')->get()->count()],
-               '30% and Above' => ['30',  $this->select('discount')->where('discount', '>', 30)->groupBy('group_id')->get()->count()],
-               '33% and Above' => ['33',  $this->select('discount')->where('discount', '>', 33)->groupBy('group_id')->get()->count() ],
-               '35% and Above' => ['35',  $this->select('discount')->where('discount', '>', 35)->groupBy('group_id')->get()->count()],
-           ],
+            'sub_category' =>  $this->getFilterLabel('sub_category', $products),
+            'price' => $this->getFilterLabel('price', $products),
+           'gender' => $this->getFilterLabel('gender', $products),
+           'size' => $this->getFilterLabel('size', $products),
+           'color_family' => $this->getFilterLabel('color_family', $products),
+           'fit' =>  $this->getFilterLabel('fit', $products),
+           'bottom_type' =>  $this->getFilterLabel('bottom_type', $products),
+           'hood' =>  $this->getFilterLabel('hood', $products),
+           'pattern' =>  $this->getFilterLabel('pattern', $products),
+           'print_or_pattern_type' =>  $this->getFilterLabel('print_or_pattern_type', $products),
+           'sleeve_length' =>  $this->getFilterLabel('sleeve_length', $products),
+           'top_length' =>  $this->getFilterLabel('top_length', $products),
+           'closure' =>  $this->getFilterLabel('closure', $products),
+           'discount' =>  $this->getFilterLabel('discount', $products),
 
          
        ];
@@ -140,26 +179,60 @@ class PimFlatCatalog extends Model
     }
 
 
-    public function getFilterLabel ($labels, $filterData)
+    public function getFilterLabel ($labels, $products)
     {   
 
       if ($labels == 'price')   {
 
-      return  [
-                'Rs0 to Rs1000'    =>   array_count_values( Arr::where($filterData->pluck($labels)->toArray(), function ($value, $key) {
-                    return $value < 1000;
-                })),
-                // 'Rs1001 to Rs1500' => ['1001,1500' , 'product_count' =>$this->select('selling_price')->whereBetween('selling_price',[1001, 1500] )->groupBy('group_id')->get()->count()],
-                // 'Rs1501 to Rs2000' => ['1501,2000'  , 'product_count' => $this->select('selling_price')->whereBetween('selling_price',[1501, 2000] )->groupBy('group_id')->get()->count()],
-                // 'Rs2001 to Rs3000' => [ '2001,3000' , 'product_count' =>$this->select('selling_price')->whereBetween('selling_price',[2001, 3000] )->groupBy('group_id')->get()->count()],
-                // 'Rs3001 to Above'  => [ '3001,1000000', 'product_count' =>$this->select('selling_price')->whereBetween('selling_price',[3001, 1000000] )->groupBy('group_id')->get()->count()]
-            ];
+        // dd($products->where('price','<', 1000)->count());
 
-      } else {
+      return [
+                'Rs0 to Rs1000'    => ['0,1000' , 'product_count' => $products->where('price','<', 1000)->count()  ],
+                'Rs1001 to Rs1500' => ['1001,1500' , 'product_count' =>$products->where('price','<', 1500)->where('price','>=', 1001)->count()  ],
+                'Rs1501 to Rs2000' => ['1501,2000'  , 'product_count' =>$products->where('price','<', 2000)->where('price','>=', 1501)->count()  ],
+                'Rs2001 to Rs3000' => [ '2001,3000' , 'product_count' =>$products->where('price','<', 3000)->where('price','>=', 2000)->count()  ],
+                'Rs3001 to Above'  => [ '3001,1000000', 'product_count' =>$products->where('price','<', 100000)->where('price','>=', 3000)->count()  ]
+            ] ;
 
-        // dd(   $filterData->pluck($labels)->toArray());
+      } elseif ($labels == 'sub_category') {
+          $requestData = request()->all();
 
-          return    array_count_values( Arr::where($filterData->pluck($labels)->toArray(), function ($value, $key) {
+          if ( count($requestData)) {
+
+                if ($products->count()) {
+
+                    $gender = $products[0]->gender ;
+                    $categoryProducts = $this->where('gender', $gender)->groupBy('group_id')->get();
+                } else {
+                    $gender = 'women' ;
+                    $categoryProducts = $this->where('gender', $gender)->groupBy('group_id')->get();
+                }
+    
+                return    array_count_values( Arr::where($categoryProducts->pluck($labels)->toArray(), function ($value, $key) {
+                    return ! is_null($value);
+                }));
+          }else {
+
+            
+              
+            return    array_count_values( Arr::where($products->pluck($labels)->toArray(), function ($value, $key) {
+                return ! is_null($value);
+            }));
+          }
+      } elseif($labels == 'discount') {
+
+            
+        return  [
+             '16% and Above' => ['16',  $products->where('discount', '>', 16)->count()],
+             '20% and Above' => ['20',  $products->where('discount', '>', 20)->count()],
+             '30% and Above' => ['30',  $products->where('discount', '>', 30)->count()],
+             '33% and Above' => ['33',  $products->where('discount', '>', 33)->count() ],
+             '35% and Above' => ['35',  $products->where('discount', '>', 35)->count()],
+         ];
+       }  else {
+
+
+          return    array_count_values( Arr::where($products->pluck($labels)->toArray(), function ($value, $key) {
                     return ! is_null($value);
                 }));
       }

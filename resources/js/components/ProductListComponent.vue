@@ -105,26 +105,35 @@ export  default {
        },
 
         getNextPageProduct() {
-            this.loading = true
+
+            // console.log((this.products.length <= this.total), this.total, this.products.length)
+
             
-            window.onscroll = () => {
-                let bottomOfWindow = document.documentElement.scrollTop + window.innerHeight === document.documentElement.offsetHeight;
-
-                if (bottomOfWindow) {
+        
                 this.loading = true
-                this.page++;
-                  const query  =  window.location.href.split('?')[1]
-                  if (query) {
-                      this.url = `http://localhost/getketch/public/api/products/st-search?page=`+this.page+'&'+ query
-                  }
-                axios.get(this.url).then(response => {
-
-                    this.products = [...this.products, ...response.data.products.data]
-                    this.loading = false
-
-                });
+                
+                window.onscroll = () => {
+                    let bottomOfWindow = document.documentElement.scrollTop + window.innerHeight === document.documentElement.offsetHeight;
+                    console.log(this.products.length, this.total)
+                    if (bottomOfWindow) {
+                    if ( (this.products.length <= this.total)) {    
+                        this.loading = true
+                        this.page++;
+                        const query  =  window.location.href.split('?')[1]
+                        if (query) {
+                            this.url = `http://localhost/getketch/public/api/products/st-search?page=`+this.page+'&'+ query
+                        }
+                        axios.get(this.url).then(response => {
+        
+                            this.products = [...this.products, ...response.data.products.data]
+                            this.loading = false
+        
+                        });
+                    }
+                    }
                 }
-            }
+            
+
         },
 
         getFilteredProducts: function() {
